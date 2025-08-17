@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -129,6 +130,41 @@ class _LoginPageState extends State<LoginPage> {
                       fontSize: 25, fontWeight: FontWeight.w900),
                 ),
                 child: const Text('Log in'),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // If you don't have account? Sign up
+            Center(
+              child: RichText(
+                text: TextSpan(
+                  style: GoogleFonts.carterOne(
+                      fontSize: 14, color: navy.withOpacity(.7)),
+                  children: [
+                    const TextSpan(text: "If you don’t have account? "),
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SignUpPage()),
+                          );
+                        },
+                        child: Text(
+                          "Sign up",
+                          style: GoogleFonts.carterOne(
+                            fontSize: 14,
+                            color: navy,
+                            decoration: TextDecoration.underline,
+                            decorationColor: navy,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
