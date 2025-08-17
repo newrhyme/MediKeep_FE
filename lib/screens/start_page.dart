@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medikeep/screens/login_page.dart';
+import 'package:medikeep/screens/signup_page.dart';
 
 class StartPage extends StatelessWidget {
   const StartPage({super.key});
@@ -69,6 +70,9 @@ class StartPage extends StatelessWidget {
                   ),
                   onPressed: () {
                     // TODO: 회원가입 페이지 이동
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SignUpPage()),
+                    );
                   },
                   child: const Text(
                     "Sign up",
