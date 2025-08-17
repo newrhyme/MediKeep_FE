@@ -25,10 +25,15 @@ flutter:
     - assets/logo1.png
     - assets/logo2.png
     - assets/splash_native.png
+    - assets/branding.png
 
 flutter_native_splash:
-  color: "#A1E3F7"
-  image: assets/splash_native.png
+  android: true
+  ios: false
+  web: true 
+  color: "A1E3F7"
+# background_image: "assets/logo1.png"
   android_12:
-    color: "#A1E3F7"
-    image: assets/splash_native.png
+    color: "A1E3F7"
+    image: "assets/logo1.png"
+    branding: "assets/branding.png"

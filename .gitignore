@@ -8,7 +8,6 @@
 .build/
 .buildlog/
 .history
-.svn/
 .swiftpm/
 migrate_working_dir/
 
@@ -43,3 +42,36 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Xcode
+*.xcworkspace/
+*.xcuserstate
+*.xcuserdata/
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+
+# Android
+android/.gradle/
+android/captures/
+android/local.properties
+android/key.properties
+android/app/google-services.json
+*.keystore
+*.jks
+
+# Coverage
+coverage/
+*.lcov
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# VSCode local history
+.vscode/
+.history/
+
+# Linux
+*.lock
