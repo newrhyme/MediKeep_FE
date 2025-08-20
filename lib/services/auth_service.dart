@@ -1,43 +1,57 @@
+// lib/services/auth_service.dart
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_client.dart';
 
 class AuthService {
-  static const _tokenKey = 'jwt_token';
+  AuthService._();
+  static final AuthService I = AuthService._();
+  final _secure = const FlutterSecureStorage();
 
-  /// 로그인: 성공 시 JWT 토큰을 로컬에 저장하고 토큰을 리턴
-  static Future<String> login(
-      {required String email, required String password}) async {
-    final res = await ApiClient.postJson('/api/users/login', {
-      'email': email,
-      'password': password,
-    });
+  Future<bool> login(String email, String password) async {
+    final res = await ApiClient.postJson(
+      "/api/users/login",
+      {"email": email.trim(), "password": password.trim()},
+    );
+
+    // 임시 디버그
+    // ignore: avoid_print
+    print("LOGIN status=${res.statusCode} body=${res.body}");
 
     if (res.statusCode == 200) {
-      // 백엔드 응답 형태에 맞춰 파싱 (예: {"token":"..."} or Authorization 헤더 등)
       final map = jsonDecode(res.body) as Map<String, dynamic>;
-      final token = (map['token'] ?? map['accessToken'] ?? '').toString();
-      if (token.isEmpty) {
-        throw Exception('Token not found in response');
+      String token = '';
+
+      if (map['token'] != null) {
+        token = map['token'].toString();
+      } else if (map['accessToken'] != null) {
+        token = map['accessToken'].toString();
+      } else if (map['data'] is Map && (map['data']['token'] != null)) {
+        token = map['data']['token'].toString();
+      } else if (map['data'] is String) {
+        // ★ 여기 추가!
+        token = map['data'] as String;
       }
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tokenKey, token);
-      return token;
-    } else {
-      // 서버에서 에러 메시지 내려주면 같이 보여주기
-      final msg =
-          res.body.isNotEmpty ? res.body : 'Login failed (${res.statusCode})';
-      throw Exception(msg);
+
+      if (token.toLowerCase().startsWith('bearer ')) {
+        token = token.substring(7).trim();
+      }
+      if (token.isEmpty) return false;
+
+      await _secure.write(key: 'jwt', value: token);
+      ApiClient.setToken(token);
+      return true;
     }
+    return false;
   }
 
-  static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+  Future<void> logout() async {
+    await _secure.delete(key: 'jwt');
+    ApiClient.setToken(null);
   }
 
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
+  Future<void> bootstrap() async {
+    final t = await _secure.read(key: 'jwt');
+    ApiClient.setToken(t);
   }
 }

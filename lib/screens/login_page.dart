@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:medikeep/screens/temp_humidity_test_page.dart';
 import 'signup_page.dart';
-import 'add_schedule_page.dart';
 import 'dashboard_page.dart';
 import '../services/auth_service.dart';
 

@@ -2,7 +2,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/ble_manager.dart'; // ★ 추가
+import '../services/ble_manager.dart';
+import '../screens/add_schedule_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -200,7 +201,15 @@ class _DashboardPageState extends State<DashboardPage> {
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'My page'),
         ],
-        onTap: (_) {},
+        onTap: (i) {
+          debugPrint('BottomNav tapped: $i');
+          if (i == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddSchedulePage()),
+            );
+          }
+        },
       ),
     );
   }
