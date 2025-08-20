@@ -1,76 +1,72 @@
-// lib/services/bluetooth_service.dart
+// bluetooth_service.dart
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart' as fbp;
 import 'package:permission_handler/permission_handler.dart';
 
 class BluetoothService {
-  static final BluetoothService I = BluetoothService._();
   BluetoothService._();
+  static final BluetoothService I = BluetoothService._();
 
-  final FlutterBluePlus _ble = FlutterBluePlus.instance;
+  /// 스캔 결과 스트림 (UI에서 listen)
+  Stream<List<fbp.ScanResult>> get scanResults =>
+      fbp.FlutterBluePlus.scanResults;
 
-  // 스캔 결과 스트림 (UI에서 listen)
-  Stream<List<ScanResult>> get scanResults => _ble.scanResults;
-
+  /// 권한 확보 (Android 12+: BLUETOOTH_SCAN/CONNECT, 이하: location)
   Future<bool> ensurePermissions() async {
-    // Android 12+ : BLUETOOTH_* 런타임 권한
-    // Android 11- : 위치 권한 필요
-    if (Platform.isAndroid) {
-      final sdk = await FlutterBluePlus.platformVersion; // "Android 14" 류
-      final major = int.tryParse(sdk.replaceAll(RegExp(r'[^0-9]'), '')) ?? 12;
+    if (!Platform.isAndroid) return true;
 
-      if (major >= 12) {
-        final statuses = await [
-          Permission.bluetoothScan,
-          Permission.bluetoothConnect,
-        ].request();
+    final results = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse, // Android 11 이하 호환
+    ].request();
 
-        if (statuses[Permission.bluetoothScan]?.isGranted != true ||
-            statuses[Permission.bluetoothConnect]?.isGranted != true) {
-          return false;
-        }
-      } else {
-        // Android 11 이하
-        final st = await Permission.locationWhenInUse.request();
-        if (!st.isGranted) return false;
-      }
+    final granted = (results[Permission.bluetoothScan]?.isGranted ?? true) &&
+        (results[Permission.bluetoothConnect]?.isGranted ?? true) &&
+        (results[Permission.locationWhenInUse]?.isGranted ?? true);
+
+    if (!granted) {
+      debugPrint('Bluetooth permissions not granted.');
     }
-    return true;
+    return granted;
   }
 
+  /// 블루투스 어댑터가 켜져있는지 확인
   Future<bool> ensureBluetoothOn() async {
-    // 어댑터 상태 체크
-    final state = await FlutterBluePlus.adapterState.first;
-    if (state == BluetoothAdapterState.on) return true;
-
-    // 사용자가 직접 켜야 할 수 있음 (토글 UI는 OS/제조사별 상이)
+    final state = await fbp.FlutterBluePlus.adapterState.first;
+    if (state == fbp.BluetoothAdapterState.on) return true;
     debugPrint('Bluetooth is OFF. Ask user to turn it ON.');
     return false;
   }
 
+  /// 스캔 시작/중지
   Future<void> startScan(
       {Duration timeout = const Duration(seconds: 6)}) async {
-    await _ble.startScan(timeout: timeout);
+    await fbp.FlutterBluePlus.startScan(timeout: timeout);
   }
 
-  Future<void> stopScan() async {
-    await _ble.stopScan();
-  }
+  Future<void> stopScan() async => fbp.FlutterBluePlus.stopScan();
 
-  Future<BluetoothDevice> connect(ScanResult r,
+  /// 연결/서비스 검색/해제
+  Future<fbp.BluetoothDevice> connect(fbp.ScanResult r,
       {Duration timeout = const Duration(seconds: 10)}) async {
     final device = r.device;
     await device.connect(timeout: timeout);
     return device;
   }
 
-  Future<List<BluetoothServiceFbp>> discover(BluetoothDevice device) async {
-    final services = await device.discoverServices();
-    return services;
+  Future<List<fbp.BluetoothService>> discover(
+      fbp.BluetoothDevice device) async {
+    return device.discoverServices();
   }
 
-  Future<void> disconnect(BluetoothDevice device) async {
+  Future<void> disconnect(fbp.BluetoothDevice device) async {
     await device.disconnect();
+  }
+
+  /// 캐릭터리스틱 읽기 예시
+  Future<List<int>> readCharacteristic(fbp.BluetoothCharacteristic c) async {
+    return c.read();
   }
 }
