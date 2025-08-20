@@ -17,9 +17,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   int taken = 2;
   int total = 3;
-  bool morning = true;
-  bool afternoon = true;
+  bool morning = false;
+  bool lunch = false;
   bool evening = false;
+  bool night = false;
 
   bool _connected = false;
   double? _temp;
@@ -177,14 +178,19 @@ class _DashboardPageState extends State<DashboardPage> {
                 onTap: () => setState(() => morning = !morning)),
             const SizedBox(height: 14),
             _doseTile(
-                label: 'Afternoon',
-                checked: afternoon,
-                onTap: () => setState(() => afternoon = !afternoon)),
+                label: 'Lunch',
+                checked: lunch,
+                onTap: () => setState(() => lunch = !lunch)),
             const SizedBox(height: 14),
             _doseTile(
                 label: 'Evening',
                 checked: evening,
                 onTap: () => setState(() => evening = !evening)),
+            const SizedBox(height: 14),
+            _doseTile(
+                label: 'Night',
+                checked: night,
+                onTap: () => setState(() => night = !night)),
           ],
         ),
       ),
