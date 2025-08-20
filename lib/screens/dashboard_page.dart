@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:medikeep/services/env_uploader.dart';
 import '../services/ble_manager.dart';
 import '../screens/add_schedule_page.dart';
 
@@ -58,8 +59,10 @@ class _DashboardPageState extends State<DashboardPage> {
         _temp = r.temp;
         _humid = r.humid;
       });
+      EnvUploader.I.setLatest(r.temp, r.humid); // 첫 값 오면 즉시 업로드 트리거
     });
     BleManager.I.connect(); // 자동 연결 시도
+    EnvUploader.I.start();
   }
 
   @override

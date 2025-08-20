@@ -44,12 +44,14 @@ class BleManager {
       _connectedCtrl.add(false);
       return;
     }
+
     final adapterState = await FlutterBluePlus.adapterState.first;
     if (adapterState != BluetoothAdapterState.on) {
       _connectedCtrl.add(false);
       return;
     }
 
+    // 1) 스캔
     await FlutterBluePlus.startScan(
       timeout: const Duration(seconds: 6),
       withServices: [serviceUuid],
@@ -65,29 +67,62 @@ class BleManager {
           await sub.cancel();
 
           _device = r.device;
-          await _device!.connect(autoConnect: false).catchError((_) {});
-          _connectedCtrl.add(true);
 
-          final services = await _device!.discoverServices();
-          for (final s in services) {
-            if (s.uuid == serviceUuid) {
-              for (final c in s.characteristics) {
-                if (c.uuid == charUuid) {
-                  _ch = c;
-                  await _ch!.setNotifyValue(true);
-                  _ch!.lastValueStream.listen(_onValue, onError: (_) {
-                    _connectedCtrl.add(false);
-                  });
-                  return;
+          try {
+            // 2) 연결 시도 (타임아웃/재시도 대비)
+            await _device!.connect(
+              autoConnect: false,
+              timeout: const Duration(seconds: 10),
+            );
+
+            // 3) 실제로 'connected' 상태가 될 때까지 대기
+            await _device!.connectionState.firstWhere(
+              (s) => s == BluetoothConnectionState.connected,
+              orElse: () => BluetoothConnectionState.disconnected,
+            );
+
+            // (안드로이드 일부 기기에서 바로 discover하면 레이스) 약간 대기
+            await Future.delayed(const Duration(milliseconds: 300));
+
+            _connectedCtrl.add(true);
+
+            // 4) 서비스 검색
+            final services = await _device!.discoverServices();
+            for (final s in services) {
+              if (s.uuid == serviceUuid) {
+                for (final c in s.characteristics) {
+                  if (c.uuid == charUuid) {
+                    _ch = c;
+                    await _ch!.setNotifyValue(true);
+                    _ch!.lastValueStream.listen(_onValue, onError: (_) {
+                      _connectedCtrl.add(false);
+                    });
+                    return; // ✅ 성공 경로
+                  }
                 }
               }
             }
+
+            // 특성을 못 찾은 경우
+            _connectedCtrl.add(false);
+            await _device!.disconnect();
+            _device = null;
+          } catch (e) {
+            // 5) 연결/서비스 검색 실패 – 상태 리셋
+            _connectedCtrl.add(false);
+            try {
+              await _device?.disconnect();
+            } catch (_) {}
+            _device = null;
+            // 필요하면 여기서 재시도 로직 추가 가능
           }
-          _connectedCtrl.add(false); // 특성 못 찾음
+
+          return; // 일단 후보 하나 처리 후 종료
         }
       }
     });
 
+    // 스캔 종료됐는데도 못 찾은 경우
     FlutterBluePlus.isScanning.listen((s) {
       if (!s && _device == null) {
         _connectedCtrl.add(false);
