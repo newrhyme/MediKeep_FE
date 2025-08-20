@@ -12,6 +12,9 @@ dependencies:
     sdk: flutter
   google_fonts: ^6.3.0
   cupertino_icons: ^1.0.8
+  flutter_reactive_ble: ^5.3.1
+  permission_handler: ^11.3.1
+  flutter_blue_plus: ^1.31.16
 
 dev_dependencies:
   flutter_test:
