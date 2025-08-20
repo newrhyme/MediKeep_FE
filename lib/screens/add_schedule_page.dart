@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/api_client.dart';
+import 'dashboard_page.dart';
 
 class AddSchedulePage extends StatefulWidget {
   const AddSchedulePage({super.key});
@@ -20,15 +22,15 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
   // 요일 & 시간대 선택 상태
   final List<String> _days = const ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   final Set<int> _selectedDays = {};
-  final List<String> _slots = const [
-    'Morning',
-    'Afternoon',
-    'Evening',
-    'Night'
-  ];
+  final List<String> _slots = const ['Morning', 'Lunch', 'Evening', 'Night'];
   final Set<int> _selectedSlots = {};
 
+  // ★ 서버 ENUM 매핑
+  static const _weekdayEnum = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  static const _slotEnum = ['MORNING', 'LUNCH', 'EVENING', 'NIGHT'];
+
   bool _showInstructions = false; // "Check dosage instructions" 후 노출
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -113,42 +115,104 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
     );
   }
 
-  void _save() {
-    // 여기서 실제 저장 로직이 들어갈 자리
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Saved successfully!',
-                  style: GoogleFonts.carterOne(
-                      fontSize: 18, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx); // 모달 닫고
-                  setState(() => _showInstructions = true); // 섹션 노출
-                },
-                child: Text(
-                  'Check dosage instructions ⟶',
-                  style: GoogleFonts.carterOne(
-                    color: navy,
-                    fontSize: 16,
-                    decoration: TextDecoration.underline,
-                    fontWeight: FontWeight.w800,
+  Future<void> _save() async {
+    if (_loading) return;
+
+    final name = _whatCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text('Enter medication name', style: GoogleFonts.carterOne())),
+      );
+      return;
+    }
+    if (_selectedDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Select at least one weekday',
+                style: GoogleFonts.carterOne())),
+      );
+      return;
+    }
+    if (_selectedSlots.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Select at least one time slot',
+                style: GoogleFonts.carterOne())),
+      );
+      return;
+    }
+
+    final weekdays = _selectedDays.map((i) => _weekdayEnum[i]).toList();
+    final timeSlots = _selectedSlots.map((i) => _slotEnum[i]).toList();
+
+    setState(() => _loading = true);
+    try {
+      final res = await ApiClient.postJson(
+        "/api/schedules",
+        {
+          "medicationName": name,
+          "medicationType": "MEDICINE", // 필요 시 드롭다운으로 바꿔도 됨
+          "weekdays": weekdays,
+          "timeSlots": timeSlots,
+        },
+      );
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        // 성공 모달
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (ctx) => Dialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Saved successfully!',
+                      style: GoogleFonts.carterOne(
+                          fontSize: 18, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      setState(() => _showInstructions = true);
+                    },
+                    child: Text(
+                      'Check dosage instructions ⟶',
+                      style: GoogleFonts.carterOne(
+                        color: navy,
+                        fontSize: 16,
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Save failed: ${res.statusCode}',
+                  style: GoogleFonts.carterOne())),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e', style: GoogleFonts.carterOne())),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -233,7 +297,7 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
                     // SAVE 버튼
                     Center(
                       child: ElevatedButton(
-                        onPressed: _save,
+                        onPressed: _loading ? null : _save,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF87E3FF),
                           foregroundColor: Colors.black87,
@@ -307,7 +371,17 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'My page'),
         ],
-        onTap: (_) {},
+        onTap: (i) {
+          if (i == 1) return;
+          switch (i) {
+            case 0:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardPage()),
+              );
+              break;
+          }
+        },
       ),
     );
   }
