@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/api_client.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -15,12 +16,14 @@ class _SignUpPageState extends State<SignUpPage> {
   static const double radius = 12;
 
   // Controllers
-  final _nicknameCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
 
   bool _obscure = true;
   String? _emailError; // null이면 정상
+
+  bool _loading = false;
 
   // 이메일 간단 검증
   bool _isValidEmail(String v) {
@@ -31,14 +34,14 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   bool get _canSubmit =>
-      _nicknameCtrl.text.trim().isNotEmpty &&
+      _nameCtrl.text.trim().isNotEmpty &&
       _pwCtrl.text.trim().isNotEmpty &&
       _isValidEmail(_emailCtrl.text);
 
   @override
   void initState() {
     super.initState();
-    _nicknameCtrl.addListener(_onChanged);
+    _nameCtrl.addListener(_onChanged);
     _pwCtrl.addListener(_onChanged);
     _emailCtrl.addListener(() {
       setState(() {
@@ -53,7 +56,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   void dispose() {
-    _nicknameCtrl.dispose();
+    _nameCtrl.dispose();
     _pwCtrl.dispose();
     _emailCtrl.dispose();
     super.dispose();
@@ -109,16 +112,16 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
             const SizedBox(height: 28),
 
-            // nickname
-            Text('nickname',
+            // name
+            Text('name',
                 style: GoogleFonts.carterOne(
                     fontSize: 20, color: navy, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             TextField(
-              controller: _nicknameCtrl,
+              controller: _nameCtrl,
               textInputAction: TextInputAction.next,
               style: GoogleFonts.carterOne(fontSize: 18, color: navy),
-              decoration: _fieldDeco('Please enter your nickname'),
+              decoration: _fieldDeco('Please enter your name'),
             ),
             const SizedBox(height: 16),
 
@@ -162,7 +165,7 @@ class _SignUpPageState extends State<SignUpPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _canSubmit ? _onSubmit : null,
+                onPressed: (!_canSubmit || _loading) ? null : _onSubmit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: navy,
                   disabledBackgroundColor: Colors.grey.shade300,
@@ -214,15 +217,43 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  void _onSubmit() {
-    // TODO: 실제 회원가입 로직
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Sign up: ${_nicknameCtrl.text} / ${_emailCtrl.text}',
-          style: GoogleFonts.carterOne(),
-        ),
-      ),
-    );
+  Future<void> _onSubmit() async {
+    if (!_canSubmit) return;
+
+    setState(() => _loading = true);
+
+    try {
+      final res = await ApiClient.postJson(
+        "/api/users/signup",
+        {
+          "email": _emailCtrl.text.trim(),
+          "password": _pwCtrl.text.trim(),
+          "name": _nameCtrl.text.trim(),
+        },
+      );
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        // 회원가입 성공
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text("✅ Sign up success!", style: GoogleFonts.carterOne())),
+        );
+        Navigator.pop(context); // 로그인 페이지로 이동
+      } else {
+        // 실패
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("❌ Failed: ${res.body}",
+                  style: GoogleFonts.carterOne())),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Error: $e", style: GoogleFonts.carterOne())),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 }

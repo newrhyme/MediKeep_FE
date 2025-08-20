@@ -15,6 +15,9 @@ dependencies:
   flutter_reactive_ble: ^5.3.1
   permission_handler: ^11.3.1
   flutter_blue_plus: ^1.31.16
+  http: ^1.5.0
+  shared_preferences: ^2.5.3
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   flutter_test:

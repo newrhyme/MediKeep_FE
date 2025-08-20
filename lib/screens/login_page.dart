@@ -4,6 +4,7 @@ import 'package:medikeep/screens/temp_humidity_test_page.dart';
 import 'signup_page.dart';
 import 'add_schedule_page.dart';
 import 'dashboard_page.dart';
+import '../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,17 +18,18 @@ class _LoginPageState extends State<LoginPage> {
   static const Color navy = Color(0xFF2D4868);
   static const double radius = 12;
 
-  final _idCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
   bool _obscure = true;
+  bool _loading = false;
 
   bool get _canSubmit =>
-      _idCtrl.text.trim().isNotEmpty && _pwCtrl.text.trim().isNotEmpty;
+      _emailCtrl.text.trim().isNotEmpty && _pwCtrl.text.trim().isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    _idCtrl.addListener(_onChanged);
+    _emailCtrl.addListener(_onChanged);
     _pwCtrl.addListener(_onChanged);
   }
 
@@ -35,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _idCtrl.dispose();
+    _emailCtrl.dispose();
     _pwCtrl.dispose();
     super.dispose();
   }
@@ -79,18 +81,18 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 50),
 
-            // ID label
-            Text('ID',
+            // Email label
+            Text('Email',
                 style: GoogleFonts.carterOne(
                     fontSize: 20, color: navy, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
 
-            // ID field
+            // Email field
             TextField(
-              controller: _idCtrl,
+              controller: _emailCtrl,
               textInputAction: TextInputAction.next,
               style: GoogleFonts.carterOne(fontSize: 18, color: navy),
-              decoration: _fieldDeco('Please enter your ID'),
+              decoration: _fieldDeco('Please enter your Email'),
             ),
             const SizedBox(height: 18),
 
@@ -176,26 +178,33 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _onSubmit() {
-    // TODO: 실제 로그인 로직
-    final isLoginSuccess = true;
+  void _onSubmit() async {
+    if (!_canSubmit || _loading) return;
 
-    if (isLoginSuccess) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const DashboardPage(),
-        ),
-      );
-    } else {
+    setState(() => _loading = true);
+    try {
+      final ok = await AuthService.I.login(_emailCtrl.text, _pwCtrl.text);
+      if (!mounted) return;
+
+      if (ok) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardPage()),
+          (_) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Login failed', style: GoogleFonts.carterOne())),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Login failed. Please try again.',
-            style: GoogleFonts.carterOne(),
-          ),
-        ),
+        SnackBar(content: Text('Error: $e', style: GoogleFonts.carterOne())),
       );
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 }
