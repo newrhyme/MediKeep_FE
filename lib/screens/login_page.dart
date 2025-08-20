@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'signup_page.dart';
+import 'add_schedule_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -175,13 +176,24 @@ class _LoginPageState extends State<LoginPage> {
 
   void _onSubmit() {
     // TODO: 실제 로그인 로직
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Try login: ${_idCtrl.text}',
-          style: GoogleFonts.carterOne(),
+    final isLoginSuccess = true;
+
+    if (isLoginSuccess) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AddSchedulePage(),
         ),
-      ),
-    );
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Login failed. Please try again.',
+            style: GoogleFonts.carterOne(),
+          ),
+        ),
+      );
+    }
   }
 }
