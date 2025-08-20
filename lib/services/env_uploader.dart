@@ -10,13 +10,15 @@ class EnvUploader {
 
   Timer? _timer;
   double? _lastT, _lastH;
+  int? _lastM;
   bool _running = false;
   DateTime? _lastSentAt;
 
   // BLE 리딩이 올 때마다 최신값 저장만
-  void setLatest(double? t, double? h) {
+  void setLatest(double? t, double? h, int? m) {
     _lastT = t;
     _lastH = h;
+    _lastM = m;
 
     // 실행 중이고 아직 한 번도 업로드 안했다면 즉시 업로드
     if (_running && _lastSentAt == null && t != null && h != null) {
@@ -24,9 +26,15 @@ class EnvUploader {
     }
   }
 
-  void start({Duration every = const Duration(minutes: 10)}) {
+  void start({
+    Duration every = const Duration(minutes: 10),
+    bool fireImmediately = false,
+  }) {
     if (_running) return;
     _running = true;
+    if (fireImmediately) {
+      _flush();
+    }
     _timer = Timer.periodic(every, (_) => _flush());
     _flush();
   }
@@ -38,21 +46,26 @@ class EnvUploader {
   }
 
   Future<void> _flush() async {
-    final t = _lastT, h = _lastH;
-    if (t == null || h == null) return; // 값 없으면 패스
+    final t = _lastT, h = _lastH, m = _lastM;
+    if (t == null || h == null) {
+      debugPrint('[EnvUploader] skip: no data yet');
+      return;
+    }
 
     try {
-      await ApiClient.postJson(
+      final res = await ApiClient.postJson(
         '/api/env/upload', // 백엔드에 맞춰 경로/스키마 조정
         {
           'temperature': t,
           'humidity': h,
+          'magnet': m ?? 0,
         },
       );
       _lastSentAt = DateTime.now();
+      debugPrint('[EnvUploader] upload ${res.statusCode}: ${res.body}');
     } catch (e) {
       // 업로드 실패는 조용히 무시(다음 턴에 재시도)
-      debugPrint('Env upload failed: $e');
+      debugPrint('[EnvUploader] upload error: $e'); // 조용한 무시 대신 로그 남기기
     }
   }
 }

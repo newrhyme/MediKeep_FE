@@ -26,6 +26,7 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _connected = false;
   double? _temp;
   double? _humid;
+  bool? _magnet;
   StreamSubscription? _connSub;
   StreamSubscription? _readSub;
 
@@ -58,9 +59,13 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         _temp = r.temp;
         _humid = r.humid;
+        _magnet = r.magnet == 1; // true = 약 O / false = 약 X
       });
-      EnvUploader.I.setLatest(r.temp, r.humid); // 첫 값 오면 즉시 업로드 트리거
+      EnvUploader.I.setLatest(r.temp, r.humid, r.magnet); // 첫 값 오면 즉시 업로드 트리거
     });
+    EnvUploader.I
+        .start(every: const Duration(minutes: 10), fireImmediately: true);
+
     BleManager.I.connect(); // 자동 연결 시도
     EnvUploader.I.start();
   }

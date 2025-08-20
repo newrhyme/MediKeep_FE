@@ -6,7 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 class BleReading {
   final double? temp;
   final double? humid;
-  final int? magnet; // 1/0
+  final int? magnet; // 0 -> 약 X / 1 -> 약 O
   const BleReading({this.temp, this.humid, this.magnet});
 }
 
@@ -14,7 +14,6 @@ class BleManager {
   BleManager._();
   static final BleManager I = BleManager._();
 
-  // ESP32에서 쓴 값(앞서 정한 것과 동일)
   static final Guid serviceUuid = Guid('0000aa10-0000-1000-8000-00805f9b34fb');
   static final Guid charUuid = Guid('0000aa11-0000-1000-8000-00805f9b34fb');
 
